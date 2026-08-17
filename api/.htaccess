@@ -1,0 +1,12 @@
+# Redirige todas las peticiones al front controller (index.php)
+RewriteEngine On
+
+# No reescribir si el archivo o carpeta existe fisicamente
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Enviar todo lo demas a index.php conservando los query params (QSA)
+RewriteRule ^ index.php [QSA,L]
+
+# Seguridad basica: no permitir listado de directorios
+Options -Indexes

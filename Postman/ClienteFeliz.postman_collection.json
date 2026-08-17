@@ -1,0 +1,786 @@
+{
+  "info": {
+    "name": "API Cliente Feliz",
+    "description": "API RESTful para el sistema de seleccion de personal de Cliente Feliz. Autenticacion: HTTP Basic Auth (Authorization: Basic base64(email:contrasena)) en cada request, excepto el registro de candidatos (POST /usuarios). Roles: reclutador y candidato. PASO 1: ejecutar el request del folder Setup para crear el candidato y guardar su id en la variable candidato_id. Base URL: http://localhost/cliente-feliz/api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "description": "Paso previo: crea un candidato de prueba. Guarda automaticamente su id en la variable candidato_id, que usan los endpoints del perfil candidato (ver/editar su perfil y ver su postulacion). Las credenciales se toman de las variables user_candidato y pass_candidato (configurables en la pestana Variables).",
+      "item": [
+        {
+          "name": "Crear candidato de prueba",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (pm.response.code === 201 && res.success) {",
+                  "    pm.collectionVariables.set('candidato_id', String(res.data.id));",
+                  "    console.log('Candidato creado con id ' + res.data.id);",
+                  "} else {",
+                  "    console.log('No se pudo crear el candidato: ' + JSON.stringify(res));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nombre\": \"Candidato Demo\",\n    \"email\": \"{{user_candidato}}\",\n    \"contrasena\": \"{{pass_candidato}}\",\n    \"rol\": \"candidato\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["usuarios"]
+            },
+            "description": "Registro publico de candidato (no requiere credenciales). Crea el usuario con las variables user_candidato/pass_candidato y almacena el id devuelto en candidato_id. Respuesta esperada: 201. Si el candidato ya existe la API responde 409 y debes usar otro email en user_candidato."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"nombre\": \"Candidato Demo\",\n    \"email\": \"{{user_candidato}}\",\n    \"contrasena\": \"{{pass_candidato}}\",\n    \"rol\": \"candidato\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/usuarios",
+                  "host": ["{{base_url}}"],
+                  "path": ["usuarios"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 5,\n        \"email\": \"candidato@clientefeliz.cl\"\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Estados",
+      "description": "Catalogo de estados de postulacion. Requiere autenticacion (cualquier rol).",
+      "item": [
+        {
+          "name": "Listar estados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/estados",
+              "host": ["{{base_url}}"],
+              "path": ["estados"]
+            },
+            "description": "Devuelve los 6 estados del catalogo. IDs: 1 Postulando, 2 Revisando, 3 Entrevista Psicologica, 4 Entrevista Personal, 5 Seleccionado, 6 Descartado. Rol requerido: any.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "description": "CRUD de usuarios. La creacion de candidatos esta en el folder Setup. Listar/eliminar usuarios: solo reclutador. Ver/editar perfil: cualquier autenticado (el candidato solo el suyo, usando {{candidato_id}}).",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["usuarios"]
+            },
+            "description": "Lista todos los usuarios. Rol requerido: reclutador. El campo contrasena se omite en la respuesta.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{candidato_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["usuarios", "{{candidato_id}}"]
+            },
+            "description": "Obtiene un usuario por id. Rol requerido: any. Usa {{candidato_id}} (id del candidato creado en Setup). Un candidato solo puede ver su propio id (403 si intenta ver otro). 404 si no existe.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nombre\": \"Candidato Demo Actualizado\",\n    \"activo\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{candidato_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["usuarios", "{{candidato_id}}"]
+            },
+            "description": "Actualiza campos parciales de un usuario. Rol requerido: any. Un candidato solo puede actualizar su propio id ({{candidato_id}}) y no puede cambiar su rol a reclutador (403). Solo se actualizan los campos enviados.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/usuarios/1",
+              "host": ["{{base_url}}"],
+              "path": ["usuarios", "1"]
+            },
+            "description": "Elimina un usuario. Rol requerido: reclutador. Fallara si tiene ofertas o postulaciones asociadas (FK RESTRICT).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ofertas laborales",
+      "description": "CRUD de ofertas laborales. Crear/editar/dar de baja: solo reclutador. Listar/ver: cualquier autenticado (el candidato ve solo ofertas activas). El DELETE es baja logica (activa = 0). El reclutador_id se toma del usuario autenticado, NO del body.",
+      "item": [
+        {
+          "name": "Crear oferta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"titulo\": \"Agente Call Center\",\n    \"descripcion\": \"Atencion a clientes en call center\",\n    \"requisitos\": \"Buena diccion y manejo de PC\",\n    \"salario\": 600000,\n    \"fecha_cierre\": \"2026-09-30\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ofertas",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas"]
+            },
+            "description": "Crea una oferta laboral. Rol requerido: reclutador (sin credenciales 401, con credenciales de candidato 403). El reclutador_id se obtiene del usuario autenticado, no se envia en el body. salario numerico, fecha_cierre en formato YYYY-MM-DD. Respuesta 201 con id.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar ofertas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ofertas",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas"]
+            },
+            "description": "Lista ofertas. Rol requerido: any. El reclutador ve todas (activas e inactivas); el candidato ve solo las activas (filtro automatico).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar ofertas activas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ofertas?activas=1",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas"],
+              "query": [
+                {
+                  "key": "activas",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Lista solo ofertas activas. Rol requerido: any. Ejemplo con credenciales de candidato (para el candidato el filtro de activas es automatico).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener oferta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ofertas/1",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas", "1"]
+            },
+            "description": "Obtiene una oferta por id. Rol requerido: any. A un candidato una oferta inactiva le responde 404. 404 si no existe.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar oferta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"titulo\": \"Agente Call Center Senior\",\n    \"salario\": 750000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ofertas/1",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas", "1"]
+            },
+            "description": "Actualiza campos parciales de una oferta. Rol requerido: reclutador. Incluye activa (1/0) para reactivar/desactivar.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dar de baja oferta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ofertas/1",
+              "host": ["{{base_url}}"],
+              "path": ["ofertas", "1"]
+            },
+            "description": "Baja logica: marca la oferta como inactiva (activa = 0). Rol requerido: reclutador. No elimina fisicamente. Respuesta: deactivated true.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/ofertas/1",
+                  "host": ["{{base_url}}"],
+                  "path": ["ofertas", "1"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 1,\n        \"deactivated\": true\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Postulaciones",
+      "description": "CRUD de postulaciones. Postular: solo candidato (el candidato_id se toma del usuario autenticado). Ver: el candidato solo las suyas, el reclutador todas o por oferta. Cambiar estado/eliminar: solo reclutador (el reclutador_id se toma del usuario autenticado).",
+      "item": [
+        {
+          "name": "Crear postulacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"oferta_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/postulaciones",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones"]
+            },
+            "description": "El candidato se postula a una oferta. Rol requerido: candidato. El candidato_id se obtiene del usuario autenticado (el creado en Setup), no se envia en el body. Estado inicial: Postulando. Si ya se postulo a esa oferta: 409 Conflict.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"oferta_id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/postulaciones",
+                  "host": ["{{base_url}}"],
+                  "path": ["postulaciones"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 1,\n        \"estado\": \"Postulando\"\n    }\n}"
+            },
+            {
+              "name": "409 Conflict",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"oferta_id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/postulaciones",
+                  "host": ["{{base_url}}"],
+                  "path": ["postulaciones"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n    \"success\": false,\n    \"message\": \"El candidato ya se postulo a esta oferta.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar postulaciones (propias)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/postulaciones",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones"]
+            },
+            "description": "Lista postulaciones. Rol requerido: any. Con credenciales de candidato devuelve SOLO sus postulaciones (con titulo de oferta y estado). Con credenciales de reclutador devuelve todas.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar postulantes de una oferta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/postulaciones?oferta_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones"],
+              "query": [
+                {
+                  "key": "oferta_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Lista los postulantes de una oferta especifica. Rol requerido: any (en la practica lo usa el reclutador).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener postulacion con historial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/postulaciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones", "1"]
+            },
+            "description": "Devuelve la postulacion con su estado actual y el historial completo de cambios + comentarios. Rol requerido: any. Un candidato solo puede ver sus propias postulaciones (403 si intenta ver otra). Para usar con el candidato de Setup, reemplaza el id por el devuelto en 'Crear postulacion'.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_candidato}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_candidato}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar estado y comentar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"estado_id\": 3,\n    \"comentario\": \"Agenda entrevista psicologica para el jueves\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/postulaciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones", "1"]
+            },
+            "description": "El reclutador cambia el estado de la postulacion y registra un comentario. Rol requerido: reclutador. El reclutador_id se obtiene del usuario autenticado, no se envia en el body. Transaccion: actualiza estado + inserta historial. estado_id: 1 Postulando, 2 Revisando, 3 Entrevista Psicologica, 4 Entrevista Personal, 5 Seleccionado, 6 Descartado.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"estado_id\": 3,\n    \"comentario\": \"Agenda entrevista psicologica para el jueves\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/postulaciones/1",
+                  "host": ["{{base_url}}"],
+                  "path": ["postulaciones", "1"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 1,\n        \"estado_actualizado\": true\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Eliminar postulacion",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/postulaciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["postulaciones", "1"]
+            },
+            "description": "Elimina una postulacion y su historial (borrado en cascada). Rol requerido: reclutador.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{user_reclutador}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{pass_reclutador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/cliente-feliz/api",
+      "type": "string"
+    },
+    {
+      "key": "user_reclutador",
+      "value": "reclutador@clientefeliz.cl",
+      "type": "string"
+    },
+    {
+      "key": "pass_reclutador",
+      "value": "reclutador123",
+      "type": "string"
+    },
+    {
+      "key": "user_candidato",
+      "value": "candidato@clientefeliz.cl",
+      "type": "string"
+    },
+    {
+      "key": "pass_candidato",
+      "value": "candidato123",
+      "type": "string"
+    },
+    {
+      "key": "candidato_id",
+      "value": "5",
+      "type": "string"
+    }
+  ]
+}

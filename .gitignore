@@ -1,0 +1,3 @@
+# Documentación y esquema de BD no se versionan en este repo
+*.md
+database.sql
